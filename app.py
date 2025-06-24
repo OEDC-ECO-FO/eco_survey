@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import pandas as pd
 from utils.plots import filter_data, plot_time_series, plot_by_country, group_by_country_year, get_regions_to_countries, plot_topic_area, plot_year_line 
 from utils.categories import TOPICS
-df = pd.read_json("data\oecd_recommendations_with_topics.json", lines=True)
+df = pd.read_json("oecd_recommendations_with_topics.json", lines=True)
 
 
 app = Flask(__name__)
