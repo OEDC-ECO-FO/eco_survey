@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>OECD Semantic Search</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+</head>
+<body>
+    <div class="tabs is-toggle is-centered">
+        <ul>
+            <li class="{% if active_tab == 'topic' %}is-active{% endif %}">
+            <a href="/">Explore by Topic</a>
+            </li>
+            <li class="{% if active_tab == 'country' %}is-active{% endif %}">
+            <a href="/country">Explore a Country or Region</a>
+            </li>
+        </ul>
+        </div>
+    <section class="section">
+        <div class="container">
+            <h1 class="title is-3">Explore by Topic</h1>
+
+            <form method="POST" action="/" class="box">
+                <div class="columns">
+                    <!-- Topic -->
+                    <div class="column">
+                        <div class="field">
+                            <label class="label">Topic</label>
+                            <div class="control">
+                                <div class="select is-fullwidth">
+                                    <select name="topic">
+                                        <option value="">-- Select a Topic --</option>
+                                        {% for t in topics %}
+                                            <option value="{{ t }}" {% if t == topic %}selected{% endif %}>{{ t }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- From Year -->
+                    <div class="column">
+                        <div class="field">
+                            <label class="label">From Year</label>
+                            <div class="control">
+                                <div class="select is-fullwidth">
+                                    <select name="year_from" id="year_from">
+                                        <option value="">-- From --</option>
+                                        {% for y in years %}
+                                            <option value="{{ y }}" {% if y == year_from %}selected{% endif %}>{{ y }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- To Year -->
+                    <div class="column">
+                        <div class="field">
+                            <label class="label">To Year</label>
+                            <div class="control">
+                                <div class="select is-fullwidth">
+                                    <select name="year_to" id="year_to">
+                                        <option value="">-- To --</option>
+                                        {% for y in years %}
+                                            <option value="{{ y }}" {% if y == year_to %}selected{% endif %}>{{ y }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                    <div class="columns">
+                        <div class="column">
+                            <div class="field">
+                                <label class="label">Regions</label>
+                                <div class="control">
+                                    <label class="checkbox">
+                                        <input type="checkbox" id="selectAllRegions" onclick="toggleAllCheckboxes('regionCheckbox', this.checked)"> Select all
+                                    </label>
+                                    <br>
+                                    {% for reg in regions %}
+                                        <label class="checkbox">
+                                            <input type="checkbox" class="regionCheckbox" name="regions" value="{{ reg }}" onchange="loadCountries()"> {{ reg }}
+                                        </label><br>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="column">
+                            <div class="field">
+                                <label class="label">Countries</label>
+                                <div class="control" id="countryCheckboxes">
+                                    <label class="checkbox">
+                                        <input type="checkbox" id="selectAllCountries" onclick="toggleAllCheckboxes('countryCheckbox', this.checked)"> Select all
+                                    </label>
+                                    <br>
+                                    <!-- Country checkboxes will be inserted here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                <div class="field">
+                    <div class="control">
+                        <button class="button is-link" type="submit">🔍 Search</button>
+                    </div>
+                </div>
+            </form>
+
+            {% if time_plot or country_plot %}
+            <div style="display: flex; gap: 40px; justify-content: center; flex-wrap: wrap;">
+                {% if time_plot %}
+                <div style="flex: 0 0 45%;">
+                    <h2 class="subtitle">Recommendations Over Time</h2>
+                    {{ time_plot | safe }}
+                </div>
+                {% endif %}
+                {% if country_plot %}
+                <div style="flex: 0 0 45%;">
+                    <h2 class="subtitle">Recommendations by Country</h2>
+                    {{ country_plot | safe }}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if results %}
+                <h2 class="title is-4 mt-5">Top Results</h2>
+
+                <!-- Sort Filter Bar -->
+                <div class="field is-grouped mb-4">
+                    <div class="control">
+                        <div class="select">
+                            <select id="sortResults" onchange="sortResults()">
+                                <option value="">-- Sort By --</option>
+                                <option value="year">Year</option>
+                                <option value="country">Country</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results container for sorting -->
+                <div id="resultsContainer">
+                    {% for block in results %}
+                        <div class="box" data-year="{{ block.year }}" data-country="{{ block.country }}">
+                            <h4 class="title is-5">{{ block.country }} ({{ block.year }})</h4>
+                            {% for r in block.recommendations %}
+                                <p><strong>Criterion:</strong> {{ r.criterion }}</p>
+                                <p><strong>Finding:</strong> {{ r.finding }}</p>
+                                <p><strong>Recommendation:</strong> {{ r.recommendation }}</p>
+                                <p><small class="has-text-grey">Related Topics:</small></p>
+                                <div class="tags">
+                                    {% for topic, score in r.assigned_topic.items() %}
+                                        <span class="tag is-info is-light">{{ topic }} ({{ score | round(2) }})</span>
+                                    {% endfor %}
+                                </div>
+                                <hr>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <script>
+        function toggleAllCheckboxes(className, checked) {
+            document.querySelectorAll("." + className).forEach(cb => cb.checked = checked);
+
+            if (className === "regionCheckbox") {
+                loadCountries(); // Reload countries when region selection changes
+            }
+
+            if (className === "countryCheckbox" && checked) {
+                // Optionally, trigger all country checkboxes to be selected when all regions are selected
+                setTimeout(() => {
+                    document.querySelectorAll(".countryCheckbox").forEach(cb => cb.checked = true);
+                }, 300); // small delay to ensure countries have loaded
+            }
+        }
+
+
+        function loadCountries() {
+            const selectedRegions = Array.from(document.querySelectorAll(".regionCheckbox:checked")).map(cb => cb.value);
+            const countryContainer = document.getElementById("countryCheckboxes");
+
+            // Remove old country checkboxes except "Select all"
+            countryContainer.innerHTML = `
+                <label class="checkbox">
+                    <input type="checkbox" id="selectAllCountries" onclick="toggleAllCheckboxes('countryCheckbox', this.checked)"> Select all
+                </label><br>
+            `;
+
+            if (selectedRegions.length === 0) return;
+
+            const query = selectedRegions.map(r => "region=" + encodeURIComponent(r)).join("&");
+            fetch(`/get_countries?${query}`)
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(country => {
+                        const checkbox = document.createElement("label");
+                        checkbox.className = "checkbox";
+                        checkbox.innerHTML = `
+                            <input type="checkbox" class="countryCheckbox" name="countries" value="${country}"> ${country}
+                        `;
+                        countryContainer.appendChild(checkbox);
+                        countryContainer.appendChild(document.createElement("br"));
+                    });
+                });
+        }
+
+        function sortResults() {
+            const sortBy = document.getElementById("sortResults").value;
+            const container = document.getElementById("resultsContainer");
+            const boxes = Array.from(container.querySelectorAll(".box"));
+
+            boxes.sort((a, b) => {
+                if (sortBy === "year") {
+                    return parseInt(b.dataset.year) - parseInt(a.dataset.year);
+                } else if (sortBy === "country") {
+                    return a.dataset.country.localeCompare(b.dataset.country);
+                }
+                return 0;
+            });
+
+            // Remove all boxes and re-append in sorted order
+            boxes.forEach(box => container.appendChild(box));
+        }
+
+        window.onload = function () {
+            loadCountries();
+            document.getElementById("sortResults").value = "year";
+            sortResults();
+        };
+    </script>
+
+
+</body>
+</html>
