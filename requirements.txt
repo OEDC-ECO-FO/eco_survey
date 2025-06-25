@@ -8,6 +8,7 @@ sentence-transformers
 notebook
 sentence_transformers
 nltk
+flask
 Flask
 hf_xet
 elasticsearch
@@ -19,3 +20,4 @@ gunicorn
 lxml
 httpx
 PyMuPDF
+ipykernel
