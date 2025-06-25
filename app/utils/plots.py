@@ -29,10 +29,8 @@ def plot_time_series(df, topic=None):
         by_country = df.groupby(["year", "country"]).size().reset_index(name="count")
 
         fig = go.Figure()
-
-        # Add lines for each country
         for i, country in enumerate(by_country["country"].unique()):
-            color = OECD_COLORS[i % len(OECD_COLORS)]  # Rotate colors
+            color = OECD_COLORS[i % len(OECD_COLORS)]
             subset = by_country[by_country["country"] == country]
             fig.add_trace(go.Scatter(
                 x=subset["year"], y=subset["count"],
@@ -52,13 +50,11 @@ def plot_time_series(df, topic=None):
         )
 
     else:
-        # Fallback for large number of countries: total volume only
         counts = df.groupby("year").size().reset_index(name="count")
         fig = px.line(
-            counts,
-            x="year", y="count", markers=True,
+            counts, x="year", y="count", markers=True,
             title=f"Recommendations on '{topic}' per Year" if topic else "Recommendations per Year",
-            color_discrete_sequence=OECD_COLORS
+            color_discrete_sequence=OECD_COLORS,
         )
         fig.update_layout(
             template="plotly_white",
@@ -70,7 +66,6 @@ def plot_time_series(df, topic=None):
 
     return fig.to_html(full_html=False)
 
-
 def plot_time_series_percentage(df, topic=None, selected_countries=None):
     if df.empty or topic is None:
         return None
@@ -78,38 +73,33 @@ def plot_time_series_percentage(df, topic=None, selected_countries=None):
     if "assigned_topic" not in df.columns:
         return None
 
-    # Ensure selected_countries is a list
     if selected_countries is None:
         selected_countries = df["country"].unique().tolist()
 
-    # Normalize topic column to ensure it exists and is dict-like
     df = df[df["country"].isin(selected_countries)].copy()
     df = df[df["assigned_topic"].apply(lambda d: isinstance(d, dict))]
-
-    # Tag rows where topic is present
     df["has_topic"] = df["assigned_topic"].apply(lambda d: topic in d)
 
-    # Count total and topic-matching recommendations per country-year
     total_counts = df.groupby(["year", "country"]).size().reset_index(name="total")
     topic_counts = df[df["has_topic"]].groupby(["year", "country"]).size().reset_index(name="matching")
 
-    # Merge and compute percentage
     merged = pd.merge(total_counts, topic_counts, how="left", on=["year", "country"])
     merged["matching"] = merged["matching"].fillna(0)
     merged["percentage"] = (merged["matching"] / merged["total"]) * 100
 
-    # Plot
     fig = go.Figure()
-    for country in merged["country"].unique():
+    for idx, country in enumerate(merged["country"].unique()):
         subset = merged[merged["country"] == country]
+        color = OECD_COLORS[idx % len(OECD_COLORS)]
         fig.add_trace(go.Scatter(
             x=subset["year"],
             y=subset["percentage"],
             mode="lines+markers",
             name=country,
-            line=dict(width=2)
+            line=dict(width=2, color=color)
         ))
-    y_max = min(100, merged["percentage"].max() * 1.2)  # add some space above top point
+
+    y_max = min(100, merged["percentage"].max() * 1.2)
 
     fig.update_layout(
         title=f"% of Recommendations on '{topic}' by Country and Year",
@@ -124,8 +114,6 @@ def plot_time_series_percentage(df, topic=None, selected_countries=None):
 
     return fig.to_html(full_html=False)
 
-
-
 def plot_by_country(df, topic=None):
     if df.empty:
         return None
@@ -133,10 +121,12 @@ def plot_by_country(df, topic=None):
     counts = df["country"].value_counts().reset_index()
     counts.columns = ["country", "count"]
 
-    fig = px.bar(counts, x="country", y="count",
-                 title=f"Recommendations on '{topic}' by Country" if topic else "Recommendations by Country",
-                 text_auto=True,
-                 color_discrete_sequence=["#4C78A8"])  # nice blue
+    fig = px.bar(
+        counts, x="country", y="count",
+        title=f"Recommendations on '{topic}' by Country" if topic else "Recommendations by Country",
+        text_auto=True,
+        color_discrete_sequence=OECD_COLORS
+    )
 
     fig.update_layout(
         template="plotly_white",
@@ -149,16 +139,13 @@ def plot_by_country(df, topic=None):
 
     return fig.to_html(full_html=False)
 
-
 def plot_topic_area(df, title=""):
     if df.empty:
         return None
 
-    # Convert assigned_topic dict to a list of topic names
     df = df.copy()
     df["topics"] = df["assigned_topic"].apply(lambda d: list(d.keys()) if isinstance(d, dict) else [])
 
-    # Explode the topics for plotting
     topic_counts = (
         df.explode("topics")
         .groupby(["year", "topics"])
@@ -170,7 +157,8 @@ def plot_topic_area(df, title=""):
         topic_counts, x="year", y="count", color="topics",
         title=f"Topic Trends in {title}",
         category_orders={"topics": sorted(topic_counts["topics"].dropna().unique())},
-        labels={"count": "Recommendation Count", "topics": "Topic"}
+        labels={"count": "Recommendation Count", "topics": "Topic"},
+        color_discrete_sequence=OECD_COLORS
     )
     fig.update_layout(
         template="plotly_white",
@@ -183,7 +171,6 @@ def plot_year_line(df, title=""):
     if df.empty or "year" not in df.columns or "country" not in df.columns:
         return None
 
-    # Group by year and country, count recommendations
     year_counts = (
         df.groupby(["year", "country"])
         .size()
@@ -194,7 +181,8 @@ def plot_year_line(df, title=""):
         year_counts, x="year", y="count", color="country",
         title=f"Yearly Recommendation Volume in {title}",
         markers=True,
-        labels={"count": "Recommendation Count", "country": "Country"}
+        labels={"count": "Recommendation Count", "country": "Country"},
+        color_discrete_sequence=OECD_COLORS
     )
     fig.update_layout(
         template="plotly_white",
@@ -221,7 +209,6 @@ def plot_region_topic_heatmap(df, region_name):
     fig.update_layout(template="plotly_white", font=dict(family="Segoe UI", size=14))
     return fig.to_html(full_html=False)
 
-
 def plot_region_streamgraph(df, region_name):
     if df.empty:
         return None
@@ -235,9 +222,9 @@ def plot_region_streamgraph(df, region_name):
         y="count",
         color="topics",
         title=f"Topic Stream in {region_name}",
-        line_group="topics"
+        line_group="topics",
+        color_discrete_sequence=OECD_COLORS
     )
     fig.update_layout(template="plotly_white", font=dict(family="Segoe UI", size=14))
     return fig.to_html(full_html=False)
-
 
