@@ -57,7 +57,7 @@ def plot_time_series(df, topic=None):
         fig = px.line(
             counts,
             x="year", y="count", markers=True,
-            title=f"Recommendations on '{topic}' per Year" if topic else "Recommendations per Year"
+            title=f"Recommendations on '{topic}' per Year" if topic else "Recommendations per Year",
             color_discrete_sequence=OECD_COLORS
         )
         fig.update_layout(

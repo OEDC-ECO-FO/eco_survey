@@ -52,8 +52,8 @@ def home():
             for region in selected_regions:
                 selected_countries.extend(regions_to_countries.get(region, []))
 
-        text_type_df = relevant_topics(df, text_type)
-        filtered = filter_data(text_type_df, selected_countries, selected_topic, year_start, year_end)
+        df_new = relevant_topics(df, text_type)
+        filtered = filter_data(df_new, selected_countries, selected_topic, year_start, year_end)
         results = group_by_country_year(filtered.to_dict(orient="records"))
 
         # Cache results using UUID key
@@ -62,7 +62,7 @@ def home():
         session["last_results_key"] = results_key 
 
         time_plot = plot_time_series(filtered, selected_topic)
-        country_plot = plot_time_series_percentage(df, selected_topic, selected_countries)
+        country_plot = plot_time_series_percentage(df_new, selected_topic, selected_countries)
 
     return render_template(
         "index.html",
@@ -85,6 +85,7 @@ def home():
 def explore_country():
     selected_regions = []
     selected_countries = []
+    text_type = "full_text"
     regional_country_analysis = {}
     year_start = MIN_YEAR
     year_end = MAX_YEAR
@@ -94,8 +95,10 @@ def explore_country():
         selected_countries = request.form.getlist("countries")
         year_start = int(request.form.get("year_from") or MIN_YEAR)
         year_end = int(request.form.get("year_to") or MAX_YEAR)
+        text_type = request.form.get("text_type", "recommendation")
 
-        filtered = filter_data(df, countries=selected_countries, year_from=year_start, year_to=year_end)
+        df_new= relevant_topics(df, text_type)
+        filtered = filter_data(df_new, countries=selected_countries, year_from=year_start, year_to=year_end)
 
         if selected_regions:
             for region in selected_regions:
@@ -125,6 +128,7 @@ def explore_country():
         regions=regions,
         selected_regions=selected_regions,
         selected_countries=selected_countries,
+        text_type=text_type,
         countries=sorted(df["country"].unique()),
         year_from=year_start,
         year_to=year_end,
