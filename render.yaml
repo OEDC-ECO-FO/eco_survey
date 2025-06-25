@@ -1,6 +1,11 @@
 services:
   - type: web
-    name: oecd-flask-app
+    name: oecd-app
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn main:app
+    startCommand: gunicorn app.app:app
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_APP
+        value: app/app.py
