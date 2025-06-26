@@ -17,9 +17,23 @@
 <section class="section">
     <div class="container">
         <h1 class="title is-3">Explore a Country or Region</h1>
-
+    
         <!-- Filter Form -->
         <form id="countryForm" method="POST" action="/country" class="box">
+             <!-- From which text (recommendations only, findings only or full text)-->
+            <div class="field">
+                <label class="label">Text Type</label>
+                <div class="control">
+                    <div class="select is-fullwidth">
+                        <select name="text_type">
+                            <option value="recommendation" {% if text_type == "recommendation" %}selected{% endif %}>Recommendation only</option>
+                            <option value="finding" {% if text_type == "finding" %}selected{% endif %}>Finding only</option>
+                            <option value="full_text" {% if text_type == "full_text" %}selected{% endif %}>Full Text (Recommendation + Finding)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             <div class="columns">
                 <!-- Regions -->
                 <div class="column">
