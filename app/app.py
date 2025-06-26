@@ -83,57 +83,81 @@ def home():
 
 @app.route("/country", methods=["GET", "POST"])
 def explore_country():
-    selected_regions = []
-    selected_countries = []
-    text_type = "full_text"
-    regional_country_analysis = {}
-    year_start = MIN_YEAR
-    year_end = MAX_YEAR
+    try:
+        selected_regions = []
+        selected_countries = []
+        text_type = "full_text"
+        regional_country_analysis = {}
+        year_start = MIN_YEAR
+        year_end = MAX_YEAR
 
-    if request.method == "POST":
-        selected_regions = request.form.getlist("regions")
-        selected_countries = request.form.getlist("countries")
-        year_start = int(request.form.get("year_from") or MIN_YEAR)
-        year_end = int(request.form.get("year_to") or MAX_YEAR)
-        text_type = request.form.get("text_type", "recommendation")
+        if request.method == "POST":
+            selected_regions = request.form.getlist("regions")
+            selected_countries = request.form.getlist("countries")
+            year_start = int(request.form.get("year_from") or MIN_YEAR)
+            year_end = int(request.form.get("year_to") or MAX_YEAR)
+            text_type = request.form.get("text_type", "recommendation")
 
-        df_new= relevant_topics(df, text_type)
-        filtered = filter_data(df_new, countries=selected_countries, year_from=year_start, year_to=year_end)
+            print("POST to /country:")
+            print("Regions:", selected_regions)
+            print("Countries:", selected_countries)
+            print("Text Type:", text_type)
+            print("Years:", year_start, year_end)
 
-        if selected_regions:
-            for region in selected_regions:
-                selected_countries.extend(regions_to_countries.get(region, []))
 
-                region_data = filtered[filtered["region"] == region]
-                topic_area_html = plot_topic_area(region_data, region)
-                year_line_html = plot_year_line(region_data, region)
+            df_new= relevant_topics(df, text_type)
+            if df_new is None:
+                    print("relevant_topics() returned None")
+                    return "Internal Error: Data processing failed.", 500
 
-                country_plots = {}
-                for country in sorted(region_data["country"].unique()):
-                    country_data = region_data[region_data["country"] == country]
-                    if country_data.empty:
-                        continue
-                    c_topic_html = plot_topic_area(country_data, country)
-                    c_line_html = plot_year_line(country_data, country)
-                    country_plots[country] = [c_topic_html, c_line_html]
+            filtered = filter_data(df_new, countries=selected_countries, year_from=year_start, year_to=year_end)
+            print(f"Filtered rows: {len(filtered)}")
 
-                regional_country_analysis[region] = {
-                    "region_graphs": [topic_area_html, year_line_html],
-                    "countries": country_plots
-                }
 
-    return render_template(
-        "country.html",
-        years=years,
-        regions=regions,
-        selected_regions=selected_regions,
-        selected_countries=selected_countries,
-        text_type=text_type,
-        countries=sorted(df["country"].unique()),
-        year_from=year_start,
-        year_to=year_end,
-        regional_country_analysis=regional_country_analysis
-    )
+            if selected_regions:
+                for region in selected_regions:
+                    selected_countries.extend(regions_to_countries.get(region, []))
+
+                    region_data = filtered[filtered["region"] == region]
+                    if region_data.empty:
+                            print(f"No data for region: {region}")
+                            continue
+
+                    topic_area_html = plot_topic_area(region_data, region)
+                    year_line_html = plot_year_line(region_data, region)
+
+                    country_plots = {}
+                    for country in sorted(region_data["country"].unique()):
+                        country_data = region_data[region_data["country"] == country]
+                        if country_data.empty:
+                            continue
+                        c_topic_html = plot_topic_area(country_data, country)
+                        c_line_html = plot_year_line(country_data, country)
+                        country_plots[country] = [c_topic_html, c_line_html]
+
+                    regional_country_analysis[region] = {
+                        "region_graphs": [topic_area_html, year_line_html],
+                        "countries": country_plots
+                    }
+
+        return render_template(
+            "country.html",
+            years=years,
+            regions=regions,
+            selected_regions=selected_regions,
+            selected_countries=selected_countries,
+            text_type=text_type,
+            countries=sorted(df["country"].unique()),
+            year_from=year_start,
+            year_to=year_end,
+            regional_country_analysis=regional_country_analysis
+        )
+
+    except Exception as e:
+        import traceback
+        print("Error in /country:", e)
+        traceback.print_exc()
+        return f"Internal Server Error: {e}", 500
 
 @app.route("/get_countries")
 def get_countries():
@@ -189,3 +213,4 @@ def download_csv():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
